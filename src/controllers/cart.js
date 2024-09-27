@@ -43,7 +43,8 @@ exports.addToCart = async (req, res) => {
             // Si no existe, crear un nuevo carrito
             cart = new Cart({
                 buyer: buyerId,
-                items: [{ product: productId, quantity }]
+                items: [{ product: productId, quantity }],
+                totalPrice: product.price * quantity // Inicializar el totalPrice con el primer producto añadido
             });
         } else {
             // Si existe, comprobar si el producto ya está en el carrito
@@ -56,6 +57,9 @@ exports.addToCart = async (req, res) => {
                 // Si no está en el carrito, agregar el producto
                 cart.items.push({ product: productId, quantity });
             }
+
+            // Recalcular el precio total
+            cart.totalPrice = await calculateTotalPrice(cart);
         }
 
         await cart.save();
@@ -63,6 +67,19 @@ exports.addToCart = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Error al añadir el producto al carrito', error });
     }
+};
+
+// Función auxiliar para calcular el totalPrice del carrito
+const calculateTotalPrice = async (cart) => {
+    let totalPrice = 0;
+
+    // Recorre cada item en el carrito para sumar el precio total
+    for (let item of cart.items) {
+        const product = await Product.findById(item.product);
+        totalPrice += product.price * item.quantity;
+    }
+
+    return totalPrice;
 };
 
 // Eliminar un producto del carrito
